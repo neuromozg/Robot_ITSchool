@@ -73,9 +73,11 @@ try:
         
         leftSpeed = yAxis*SPEED + xAxis*SPEED/2
         rightSpeed = yAxis*SPEED - xAxis*SPEED/2
-        
+
+        #формируем пакет данных
         msg = pickle.dumps((packetCount, leftSpeed, rightSpeed, liftYawState, liftPitchState, cameraPosState, lightState, parkState))
         #print(len(msg), msg)
+        #отправляем пакет
         controlClient.sendto(msg, (IP_ROBOT, CONTROL_PORT))
         packetCount += 1
         time.sleep(0.1)

@@ -83,6 +83,19 @@ def SetPitch(state):
     servoPitch.setValue(liftPitchPos)
     print('Pitch', liftPitchPos)
 
+def SetCameraPos(state):
+    global cameraPos
+    if state == 1: #подъем
+        cameraPos += 1
+        if cameraPos > CAMERA_MAX_POS:
+            cameraPos = CAMERA_MAX_POS
+    elif state == 2:
+        cameraPos -= 1
+        if cameraPos < CAMERA_MIN_POS:
+            cameraPos = CAMERA_MIN_POS
+    servoCamera.setValue(cameraPos)
+    print('Camera', cameraPos)
+
 def CameraParking():
     servoYaw.setValue(LIFT_YAW_PARK_POS)
     servoPitch.setValue(LIFT_PITCH_PARK_POS)
