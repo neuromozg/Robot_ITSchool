@@ -57,7 +57,7 @@ def SetSpeed(leftSpeed, rightSpeed):
     motorRight.setValue(rightSpeed)
 
 def SetLight(state):
-    print('Light', state)
+    #print('Light', state)
     pass
 
 def SetYaw(state):
@@ -102,9 +102,15 @@ def SetCameraPos(state):
 
 def CameraParking():
     global cameraParking
+    global liftYawPos
+    global liftPitchPos
+    global cameraPos
     servoYaw.setValue(LIFT_YAW_PARK_POS)
+    liftYawPos = LIFT_YAW_PARK_POS
     servoPitch.setValue(LIFT_PITCH_PARK_POS)
+    liftPitchPos = LIFT_PITCH_PARK_POS
     servoCamera.setValue(CAMERA_PARK_POS)
+    cameraPos = CAMERA_PARK_POS
     cameraParking = True
     
     
@@ -150,11 +156,11 @@ try:
         #разбираем по переменным принятый пакет
         packetCount, leftSpeed, rightSpeed, liftYawState, liftPitchState, cameraPosState, lightState, parkState = pickle.loads(data[0])
 
-        print('Packet:', packetCount)
-
         SetSpeed(leftSpeed, rightSpeed) #задем скорость
 
         if not parkState: #если не запаркована камера
+            if cameraParking:
+                cameraParking = False
             if liftYawState:
                 SetYaw(liftYawState) #крутим по/против часовой стрелке
             if liftPitchState:
@@ -166,14 +172,13 @@ try:
         else:
             if not cameraParking:
                 CameraParking() #камера в парковочное состояние
-                time.sleep(2)
 
         SetLight(lightState) #подсветка
 
-        print('Yaw: %d, Pitch: %d, Camera: %d' % (liftYawPos, liftPitchPos, cameraPos))
+        voltage = adc.getVoltageFiltered() # получаем напряжение аккумулятора
 
-        #voltage = adc.getVoltageFiltered() # получаем напряжение аккумулятора
-        #print('Current voltage: %0.2fV' % voltage)
+        print('Packet: %d, Speed: %d-%d, Yaw: %d, Pitch: %d, Camera: %d, Park: %d, Voltage: %0.2fV' %
+              (packetCount, leftSpeed, rightSpeed, liftYawPos, liftPitchPos, cameraPos, parkState, voltage))
     
         gpio.ledToggle()    # переключаем светодиод
         
