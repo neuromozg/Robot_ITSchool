@@ -24,22 +24,26 @@ IP_ROBOT = str(os.popen('hostname -I | cut -d\' \' -f1').readline().replace('\n'
 CONTROL_PORT = 8000
 CONTROL_TIMEOUT = 30
 
-LIFT_PITCH_MAX_POS = 180
-LIFT_PITCH_MIN_POS = 0
-LIFT_PITCH_PARK_POS = 90
+LIFT_PITCH_MAX_POS = 120
+LIFT_PITCH_MIN_POS = 55
+LIFT_PITCH_PARK_POS = 55
 
-LIFT_YAW_MAX_POS = 180
-LIFT_YAW_MIN_POS = 0
-LIFT_YAW_PARK_POS = 90
+LIFT_YAW_MAX_POS = 172
+LIFT_YAW_MIN_POS = 37
+LIFT_YAW_PARK_POS = 108
 
-CAMERA_MAX_POS = 180
-CAMERA_MIN_POS = 0
-CAMERA_PARK_POS = 90
+CAMERA_MAX_POS = 165
+CAMERA_MIN_POS = 108
+CAMERA_PARK_POS = 165
+
+SERVO_STEP = 2
 
 running = True
 liftPitchPos = LIFT_PITCH_PARK_POS
 liftYawPos = LIFT_YAW_PARK_POS
 cameraPos = CAMERA_PARK_POS
+
+cameraParking = False
 
 # функция, которая будет срабатывать при нажатии на кнопку
 def ButtonEvent(a):     # обязательно должна иметь один аргумент
@@ -48,9 +52,9 @@ def ButtonEvent(a):     # обязательно должна иметь оди�
     print("Somebody pressed button!")
 
 def SetSpeed(leftSpeed, rightSpeed):
-    print(leftSpeed, rightSpeed)
-    #motorLeft.setValue(leftSpeed)
-    #motorRight.setValue(rightSpeed)
+    #print(leftSpeed, rightSpeed)
+    motorLeft.setValue(leftSpeed)
+    motorRight.setValue(rightSpeed)
 
 def SetLight(state):
     print('Light', state)
@@ -59,47 +63,49 @@ def SetLight(state):
 def SetYaw(state):
     global liftYawPos
     if state == 1: #подъем
-        liftYawPos += 1
+        liftYawPos += SERVO_STEP
         if liftYawPos > LIFT_YAW_MAX_POS:
             liftYawPos = LIFT_YAW_MAX_POS
     elif state == 2:
-        liftYawPos -= 1
+        liftYawPos -= SERVO_STEP
         if liftYawPos < LIFT_YAW_MIN_POS:
             liftYawPos = LIFT_YAW_MIN_POS
     servoYaw.setValue(liftYawPos)
-    print('Yaw', liftYawPos) 
+    #print('Yaw', liftYawPos) 
 
 
 def SetPitch(state):
     global liftPitchPos
     if state == 1: #подъем
-        liftPitchPos += 1
+        liftPitchPos += SERVO_STEP
         if liftPitchPos > LIFT_PITCH_MAX_POS:
             liftPitchPos = LIFT_PITCH_MAX_POS
     elif state == 2:
-        liftPitchPos -= 1
+        liftPitchPos -= SERVO_STEP
         if liftPitchPos < LIFT_PITCH_MIN_POS:
             liftPitchPos = LIFT_PITCH_MIN_POS
     servoPitch.setValue(liftPitchPos)
-    print('Pitch', liftPitchPos)
+    #print('Pitch', liftPitchPos)
 
 def SetCameraPos(state):
     global cameraPos
     if state == 1: #подъем
-        cameraPos += 1
+        cameraPos += SERVO_STEP
         if cameraPos > CAMERA_MAX_POS:
             cameraPos = CAMERA_MAX_POS
     elif state == 2:
-        cameraPos -= 1
+        cameraPos -= SERVO_STEP
         if cameraPos < CAMERA_MIN_POS:
             cameraPos = CAMERA_MIN_POS
     servoCamera.setValue(cameraPos)
-    print('Camera', cameraPos)
+    #print('Camera', cameraPos)
 
 def CameraParking():
+    global cameraParking
     servoYaw.setValue(LIFT_YAW_PARK_POS)
     servoPitch.setValue(LIFT_PITCH_PARK_POS)
     servoCamera.setValue(CAMERA_PARK_POS)
+    cameraParking = True
     
     
 #создаем сервориводы
@@ -110,6 +116,9 @@ servoCamera = RPiPWM.Servo180(SERVO_CAMERA_CHANNEL, extended=True)
 #моторы
 motorLeft = RPiPWM.ReverseMotor(MOTOR_LEFT_CHANNEL) # мотор с реверсом
 motorRight = RPiPWM.ReverseMotor(MOTOR_RIGHT_CHANNEL) # мотор с реверсом
+
+SetSpeed(0, 0) #останов моторов
+CameraParking() #камера в парковочное состояние
 
 #подсветка
 light = RPiPWM.Switch(LIGHT_CHANNEL)       # на этом канале будут просто чередоваться высокий и низкий уровни
@@ -149,9 +158,19 @@ try:
             if liftYawState:
                 SetYaw(liftYawState) #крутим по/против часовой стрелке
             if liftPitchState:
-                SetPitch(liftPitchState) #поднимаем/опускаем 
+                SetPitch(liftPitchState) #поднимаем/опускаем
+                if liftPitchState == 1:
+                    SetCameraPos(2)
+                else:
+                    SetCameraPos(1)
+        else:
+            if not cameraParking:
+                CameraParking() #камера в парковочное состояние
+                time.sleep(2)
 
         SetLight(lightState) #подсветка
+
+        print('Yaw: %d, Pitch: %d, Camera: %d' % (liftYawPos, liftPitchPos, cameraPos))
 
         #voltage = adc.getVoltageFiltered() # получаем напряжение аккумулятора
         #print('Current voltage: %0.2fV' % voltage)
@@ -164,6 +183,7 @@ except (KeyboardInterrupt, SystemExit):
 controlServer.close()
 SetSpeed(0, 0) #останов моторов
 CameraParking() #камера в парковочное состояние
+adc.stop() # останов замеров напряжения
 
 print('End program')
 

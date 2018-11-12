@@ -12,7 +12,8 @@ import pickle
 sys.path.append('../Joystick')
 import joystick
 
-IP_ROBOT = '192.168.1.184'
+#IP_ROBOT = '192.168.1.184' #дом
+IP_ROBOT = '173.1.0.34' #лаба
 CONTROL_PORT = 8000
 SPEED = 100
 
